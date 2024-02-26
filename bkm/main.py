@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
 import html
+import re
+from selenium import webdriver
 
 url = "https://wiki.52poke.com/wiki/%E5%AE%9D%E5%8F%AF%E6%A2%A6%E5%88%97%E8%A1%A8%EF%BC%88%E6%8C%89%E5%85%A8%E5%9B%BD%E5%9B%BE%E9%89%B4%E7%BC%96%E5%8F%B7%EF%BC%89"
 
@@ -14,38 +16,46 @@ soup = BeautifulSoup(html_doc, "html.parser")
 
 html_shidai = soup.find_all('table', class_='rdexn')
 
+# 设置总空数组
 ar = []
 # len(html_shidai) 可取其长度
-# print(len(html_shidai))
+
+# 循环总的table 找到每个table下的tr 
+# 再循环tr
+driver = webdriver.Chrome()
+driver.get(url)
 for index, shidai_node in enumerate(html_shidai):
-    tr_list = shidai_node.select('tbody tr')
-    # print(len(tr_list))
-    tmp = {
-        # "order": tr_list[0].attrs.get('data-type'),
-        "img": "",
-        "cn_name": "",
-        "en_name": "",
-        "jap_name": "",
-        "shuxing": []
-    }
+    tr_list = shidai_node.select('tbody tr:not(thead tr)')
     for idx, row in enumerate(tr_list):
-        td = row.select("td")
-        # print(row)
-        if len(td) >3 and td[3]:
-            # html.unescape() 可以处理转义
-            tmp["cn_name"] = td[3].get_text().strip()
-            tmp["en_name"] = td[5].get_text().strip()
-            tmp["jap_name"] = td[4].get_text().strip()
-        # print(idx, td)
-        # print(idx, tr[idx])
-        # tmp["img"] = ''
-        # tmp["cn_name"] = td[idx].get_txt()
-        # tmp["cn_name"] = td[3].get_txt()
-        # for ix, ix_row in enumerate(td):
-        #     # print(ix)
-        #     tmp["cn_name"] = td[ix].get_txt()
-    # ar[index]["order"] = tr[0].attrs.get('data-type')
+        tmp = {
+            "order": "",
+            "img": "",
+            "cn_name": "",
+            "en_name": "",
+            "jap_name": "",
+            "shuxing": []
+        }
         
-    ar.append([tmp])
+        # if row:
+        td = row.select("td")
+
+        if td:
+        # html.unescape() 可以处理转义
+            tmp["cn_name"] = td[3].get_text().strip().replace("#", "")
+            tmp["en_name"] = td[5].get_text().strip().replace("#", "")
+            tmp["jap_name"] = td[4].get_text().strip().replace("#", "")
+            tmp["order"] = td[0].get_text().strip().replace("#", "")
+            if td[6].find('a'):
+                st = td[6].attrs
+                ca = '.' + st["class"][0] + '.' +  st["class"][1] + '.' +  st["class"][2]
+                # s,*rest = st["class"]
+                el = driver.find_element("css selector" ,ca)
+                tmp["shuxing"].append({"name": td[6].get_text().strip(), "bg": el.value_of_css_property("background-color")})
+            if td[7].find('a'):
+                st = td[7].attrs
+                ca = '.' + st["class"][0] + '.' +  st["class"][1] + '.' +  st["class"][2]
+                el = driver.find_element("css selector" ,ca)
+                tmp["shuxing"].append({"name": td[7].get_text().strip(), "bg": el.value_of_css_property("background-color")})
+        ar.append(tmp)    
     print(ar)
     print('\n')
